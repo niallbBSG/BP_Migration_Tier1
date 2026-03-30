@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>BrightPay Migration — Tier 1 Readiness Assessment</title>
+<style>
+  :root {
+    --bright-blue: #1B5FAA;
+    --bright-dark: #0D3B6E;
+    --bright-light: #E8F0FE;
+    --green: #2E7D32;
+    --red: #C62828;
+    --amber: #F57F17;
+    --grey: #6B7280;
+    --bg: #F5F7FA;
+    --white: #FFFFFF;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: var(--bg);
+    color: #1a1a1a;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  /* PASSWORD GATE */
+  .pw-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, var(--bright-blue), var(--bright-dark));
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+  }
+  .pw-box {
+    background: white; border-radius: 16px; padding: 48px 44px;
+    max-width: 420px; width: 90%; text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+  .pw-box .logo { font-size: 28px; font-weight: 700; color: var(--bright-blue); margin-bottom: 8px; }
+  .pw-box .subtitle { color: var(--grey); font-size: 14px; margin-bottom: 28px; }
+  .pw-box input {
+    width: 100%; padding: 14px 16px; border: 2px solid #E5E7EB;
+    border-radius: 10px; font-size: 16px; font-family: inherit;
+    text-align: center; letter-spacing: 2px; transition: border-color 0.2s;
+  }
+  .pw-box input:focus { outline: none; border-color: var(--bright-blue); }
+  .pw-box input.error { border-color: var(--red); animation: shake 0.4s ease; }
+  .pw-box .pw-btn {
+    display: block; width: 100%; margin-top: 16px; padding: 14px;
+    background: var(--bright-blue); color: white; border: none;
+    border-radius: 10px; font-size: 16px; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: background 0.2s;
+  }
+  .pw-box .pw-btn:hover { background: var(--bright-dark); }
+  .pw-box .pw-error { color: var(--red); font-size: 13px; margin-top: 12px; min-height: 20px; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+  }
+  .pw-hidden { display: none !important; }
+  /* MAIN APP */
+  .header {
+    background: linear-gradient(135deg, var(--bright-blue), var(--bright-dark));
+    color: white;
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--shadow);
+  }
+  .header h1 { font-size: 20px; font-weight: 600; }
+  .header .progress-info { font-size: 14px; opacity: 0.9; }
+  .progress-bar-container {
+    background: rgba(255,255,255,0.2);
+    height: 6px;
+    border-radius: 3px;
+    width: 200px;
+    margin-top: 6px;
+  }
+  .progress-bar {
+    background: white;
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+  .container {
+    max-width: 780px;
+    margin: 32px auto;
+    padding: 0 20px;
+  }
+  .card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 36px 40px;
+    box-shadow: var(--shadow);
+    margin-bottom: 24px;
+  }
+  .topic-badge {
+    display: inline-block;
+    background: var(--bright-light);
+    color: var(--bright-blue);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .q-number {
+    font-size: 13px;
+    color: var(--grey);
+    margin-bottom: 4px;
+  }
+  .q-type {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .q-type.mc { background: #E3F2FD; color: #1565C0; }
+  .q-type.tf { background: #FFF3E0; color: #E65100; }
+  .q-type.scenario { background: #F3E5F5; color: #7B1FA2; }
+  .q-text {
+    font-size: 17px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    line-height: 1.5;
+  }
+  .q-scenario {
+    background: #F8F9FA;
+    border-left: 4px solid var(--bright-blue);
+    padding: 14px 18px;
+    margin: 12px 0 20px 0;
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+    color: #374151;
+    font-size: 15px;
+  }
+  .options { margin-top: 16px; }
+  .option-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+    border: 2px solid #E5E7EB;
+    border-radius: 10px;
+    background: white;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    line-height: 1.4;
+  }
+  .option-btn:hover { border-color: var(--bright-blue); background: var(--bright-light); }
+  .option-btn.selected { border-color: var(--bright-blue); background: var(--bright-light); font-weight: 500; }
+  .tf-group { display: flex; gap: 12px; margin-top: 16px; }
+  .tf-btn {
+    flex: 1;
+    padding: 14px;
+    border: 2px solid #E5E7EB;
+    border-radius: 10px;
+    background: white;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    text-align: center;
+  }
+  .tf-btn:hover { border-color: var(--bright-blue); }
+  .tf-btn.selected { border-color: var(--bright-blue); background: var(--bright-light); }
+  .text-answer {
+    width: 100%;
+    min-height: 140px;
+    padding: 14px 16px;
+    border: 2px solid #E5E7EB;
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    line-height: 1.5;
+    resize: vertical;
+    margin-top: 16px;
+    transition: border-color 0.2s;
+  }
+  .text-answer:focus { outline: none; border-color: var(--bright-blue); }
+  .text-answer::placeholder { color: #9CA3AF; }
+  .hint {
+    font-size: 13px;
+    color: var(--grey);
+    margin-top: 8px;
+    font-style: italic;
+  }
+  .btn-next {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bright-blue);
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background 0.2s;
+    font-family: inherit;
+  }
+  .btn-next:hover { background: var(--bright-dark); }
+  .btn-next:disabled { background: #9CA3AF; cursor: not-allowed; }
+  .btn-next .arrow { font-size: 18px; }
+  .welcome-card h2 {
+    color: var(--bright-blue);
+    font-size: 26px;
+    margin-bottom: 16px;
+  }
+  .welcome-card p { margin-bottom: 14px; font-size: 15px; }
+  .welcome-card .stat-row {
+    display: flex;
+    gap: 16px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+  .stat-box {
+    flex: 1;
+    min-width: 140px;
+    background: var(--bright-light);
+    padding: 16px;
+    border-radius: 10px;
+    text-align: center;
+  }
+  .stat-box .num { font-size: 28px; font-weight: 700; color: var(--bright-blue); }
+  .stat-box .label { font-size: 12px; color: var(--grey); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+  .name-input {
+    width: 100%;
+    max-width: 380px;
+    padding: 12px 16px;
+    border: 2px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: inherit;
+    margin-top: 8px;
+    transition: border-color 0.2s;
+  }
+  .name-input:focus { outline: none; border-color: var(--bright-blue); }
+  /* Results */
+  .results-card h2 { color: var(--bright-blue); font-size: 24px; margin-bottom: 20px; }
+  .verdict-box {
+    text-align: center;
+    padding: 28px;
+    border-radius: 12px;
+    margin: 20px 0;
+  }
+  .verdict-box.pass { background: #E8F5E9; border: 2px solid var(--green); }
+  .verdict-box.fail { background: #FFEBEE; border: 2px solid var(--red); }
+  .verdict-box .verdict-label { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+  .verdict-box.pass .verdict-label { color: var(--green); }
+  .verdict-box.fail .verdict-label { color: var(--red); }
+  .verdict-box .verdict-score { font-size: 48px; font-weight: 700; margin: 8px 0; }
+  .verdict-box.pass .verdict-score { color: var(--green); }
+  .verdict-box.fail .verdict-score { color: var(--red); }
+  .verdict-box .verdict-text { font-size: 16px; font-weight: 500; }
+  .breakdown-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 14px;
+  }
+  .breakdown-table th {
+    background: var(--bright-blue);
+    color: white;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+  }
+  .breakdown-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #E5E7EB;
+  }
+  .breakdown-table tr:nth-child(even) { background: #F9FAFB; }
+  .score-bar-bg {
+    background: #E5E7EB;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    min-width: 100px;
+  }
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+  }
+  .gap-section { margin-top: 24px; }
+  .gap-section h3 { font-size: 16px; color: var(--red); margin-bottom: 10px; }
+  .gap-item {
+    background: #FFF8E1;
+    border-left: 4px solid var(--amber);
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    border-radius: 0 8px 8px 0;
+    font-size: 14px;
+  }
+  .gap-item strong { color: #333; }
+  .review-section { margin-top: 24px; }
+  .review-section h3 { font-size: 16px; color: var(--bright-blue); margin-bottom: 12px; }
+  .review-item {
+    background: #F8F9FA;
+    padding: 16px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+  .review-item .rq { font-weight: 600; margin-bottom: 6px; }
+  .review-item .ryour { color: var(--red); margin-bottom: 4px; }
+  .review-item .rcorrect { color: var(--green); }
+  .review-item .rmark { float: right; font-weight: 700; font-size: 15px; }
+  .hidden { display: none; }
+  .timer { font-size: 13px; color: rgba(255,255,255,0.8); margin-top: 4px; }
+  @media (max-width: 600px) {
+    .card { padding: 24px 20px; }
+    .header { flex-direction: column; gap: 8px; }
+    .stat-row { flex-direction: column; }
+    .pw-box { padding: 32px 24px; }
+  }
+  .print-btn {
+    background: white;
+    color: var(--bright-blue);
+    border: 2px solid var(--bright-blue);
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: 12px;
+  }
+  .print-btn:hover { background: var(--bright-light); }
+  @media print {
+    .header { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .btn-next, .print-btn { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- PASSWORD GATE -->
+<div class="pw-overlay" id="pwOverlay">
+  <div class="pw-box">
+    <div class="logo">BrightPay</div>
+    <div class="subtitle">Tier 1 Readiness Assessment</div>
+    <p style="font-size:14px;color:#374151;margin-bottom:20px;">Enter the access code provided by your team lead to begin.</p>
+    <input type="password" id="pwInput" placeholder="Access code" autofocus>
+    <button class="pw-btn" id="pwBtn" onclick="checkPassword()">Continue</button>
+    <div class="pw-error" id="pwError"></div>
+  </div>
+</div>
+
+<!-- MAIN APP (hidden until password entered) -->
+<div id="mainApp" class="pw-hidden">
+  <div class="header">
+    <div>
+      <h1>BrightPay Migration — Tier 1 Readiness Assessment</h1>
+      <div class="progress-info" id="progressInfo">Welcome</div>
+      <div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="timer" id="timerDisplay"></div>
+    </div>
+  </div>
+  <div class="container" id="content"></div>
+</div>
+
+<script>
+// --- PASSWORD GATE ---
+// To change the password, edit the string below.
+const ACCESS_CODE = "BrightMigrate2026";
+
+function checkPassword() {
+  const input = document.getElementById('pwInput').value.trim();
+  if (input === ACCESS_CODE) {
+    document.getElementById('pwOverlay').classList.add('pw-hidden');
+    document.getElementById('mainApp').classList.remove('pw-hidden');
+    showWelcome();
+  } else {
+    document.getElementById('pwInput').classList.add('error');
+    document.getElementById('pwError').textContent = 'Incorrect access code. Please try again.';
+    setTimeout(() => document.getElementById('pwInput').classList.remove('error'), 400);
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('pwInput').addEventListener('keypress', e => { if (e.key === 'Enter') checkPassword(); });
+});
+
+// --- QUESTIONS ---
+const QUESTIONS = [
+  // ===== PRODUCT KNOWLEDGE =====
+  {
+    id: 1, topic: "Product Knowledge", type: "scenario",
+    text: "A customer calls and says:",
+    scenario: "\"I've been using BrightPay Desktop for years. Can you explain the basic steps I need to follow to move over to BrightPay Cloud?\"",
+    prompt: "In your own words, walk the customer through the 3-step migration process. Be specific about what happens at each step.",
+    keywords: ["create","organisation","import","employer","open","data file","bright id","log in","desktop"],
+    keyPhraseSets: [
+      ["create","organi"],
+      ["import","employer"],
+      ["open","employer"]
+    ],
+    idealAnswer: "Step 1: Create the Organisation — direct the customer to brightpay.brightsg.com, log in with their Bright ID (or sign up for one), and enter their organisation name, address, billing plan, and payment method. Step 2: Import Employer(s) from Desktop — select 'Import from Windows/Mac', review the post-import checklist, browse to and select the latest 2025/26 data file. Step 3: Open the Employer — click 'Open employer' to access all imported payroll data. After these steps, guide them through re-entering HMRC Gateway Credentials and Nest Credentials (if applicable), and adding Team Members.",
+    points: 3
+  },
+  {
+    id: 2, topic: "Product Knowledge", type: "mc",
+    text: "After importing from BrightPay Desktop to Cloud, what data must the customer manually re-enter?",
+    options: [
+      "Employee names and addresses",
+      "HMRC Gateway Credentials and Nest Credentials (if applicable)",
+      "All pay elements and pension details",
+      "Payslip history from previous tax years"
+    ],
+    correct: 1,
+    points: 1
+  },
+  {
+    id: 3, topic: "Product Knowledge", type: "tf",
+    text: "BrightPay Connect and BrightPay Cloud portals are the same product.",
+    correct: false,
+    explanation: "BrightPay Connect is a legacy Desktop add-on. BrightPay Cloud has its own built-in portals (Employee Self Service, Manager, Client) at no extra charge — they are separate products.",
+    points: 1
+  },
+  {
+    id: 4, topic: "Product Knowledge", type: "mc",
+    text: "What is the maximum number of employees (including leavers) allowed per employer in BrightPay Cloud?",
+    options: ["100", "200", "300", "500"],
+    correct: 2,
+    points: 1
+  },
+  {
+    id: 5, topic: "Product Knowledge", type: "mc",
+    text: "A customer wants to import their 2024/25 data file into BrightPay Cloud alongside their current 2025/26 file. What should you advise?",
+    options: [
+      "Go ahead — all years can be imported at any time",
+      "Only import the current tax year file; previous years remain accessible via Desktop",
+      "They need to contact the Migration Team before importing any older files",
+      "They need a special licence to import data from previous tax years"
+    ],
+    correct: 1,
+    points: 1
+  },
+  {
+    id: 6, topic: "Product Knowledge", type: "mc",
+    text: "A customer imports their employer to BrightPay Cloud and then makes a change in BrightPay Desktop. Will that change appear in Cloud?",
+    options: [
+      "Yes — changes sync automatically between Desktop and Cloud",
+      "Yes, but only after a 24-hour delay",
+      "No — Desktop and Cloud are separate packages and changes do not sync",
+      "Only payslip data syncs; other changes do not"
+    ],
+    correct: 2,
+    points: 1
+  },
+  {
+    id: 7, topic: "Product Knowledge", type: "mc",
+    text: "What are the four team member roles available in BrightPay Cloud?",
+    options: [
+      "Owner, Administrator, Payroll Processor, Billing Manager",
+      "Owner, Manager, Employee, Guest",
+      "Admin, Supervisor, Processor, Viewer",
+      "Owner, Administrator, Standard User, Read-Only"
+    ],
+    correct: 0,
+    points: 1
+  },
+  {
+    id: 8, topic: "Product Knowledge", type: "tf",
+    text: "The Employee Self Service (ESS) Portal is disabled by default in BrightPay Cloud. Customers must enable it manually.",
+    correct: false,
+    explanation: "The ESS Portal is ENABLED by default. Customers who do not want to use it must disable it via Employer tab → Employee Portal.",
+    points: 1
+  },
+  // ===== CALL HANDLING =====
+  {
+    id: 9, topic: "Call Handling", type: "scenario",
+    text: "You receive a call:",
+    scenario: "\"Hi, I'm a single-employer customer using BrightPay Desktop. I've got about 40 employees and just need help getting set up on Cloud. My setup is pretty straightforward.\"",
+    prompt: "Describe the full call flow you would follow for this customer, from migration steps through to wrap-up. Include what you'd do at each stage.",
+    keywords: ["3 step","migration","credential","hmrc","team member","portal","self service","manager","client","ai bot","macro","zendesk","wrap"],
+    keyPhraseSets: [
+      ["migrat","step"],
+      ["credential","hmrc"],
+      ["portal"],
+      ["macro","zendesk"]
+    ],
+    idealAnswer: "1) Walk the customer through the 3-step migration process (create organisation, import employer, open employer). 2) Guide them through adding credentials — HMRC Gateway Credentials and Nest Credentials if applicable — and explain how to add Team Members. 3) Highlight the available portals: Employee Self Service, Manager Portal, and Client Portal. If they don't use BrightPay Connect and don't want ESS, advise how to disable it. 4) Wrap up: point out the in-product AI bot for future queries, then send the Zendesk macro 'BP Migrations > Moving from BPUK Desktop to BP Cloud (Standard)'.",
+    points: 3
+  },
+  {
+    id: 10, topic: "Call Handling", type: "mc",
+    text: "You've completed a standard single-employer migration call. Which Zendesk macro should you send at wrap-up?",
+    options: [
+      "UK Migration Care Pack (Standard)",
+      "BP Migrations > Moving from BPUK Desktop to BP Cloud (Standard)",
+      "UK Migration Emergency (Standard)",
+      "BP Migrations > Importing CIS from BrightPay Desktop to BrightCIS"
+    ],
+    correct: 1,
+    points: 1
+  },
+  {
+    id: 11, topic: "Call Handling", type: "mc",
+    text: "You've completed a Bureau customer migration with a straightforward setup. Which Zendesk macro do you send?",
+    options: [
+      "BP Migrations > Moving from BPUK Desktop to BP Cloud (Standard)",
+      "BP Migrations > Moving from BPUK Desktop to BP Cloud (Bureau)",
+      "UK Migration Care Pack (Bureau)",
+      "BP Migrations > Bureau Complex Migration"
+    ],
+    correct: 1,
+    points: 1
+  },
+  {
+    id: 12, topic: "Call Handling", type: "mc",
+    text: "A customer asks: \"How much does BrightPay Cloud cost per month?\" What should you do?",
+    options: [
+      "Look up the pricing calculator and walk them through the figures",
+      "Explain the monthly and annual billing options in detail",
+      "Refer them to the Sales team — brightpaysales@brightsg.com or phone 0345 9390019 (select Sales)",
+      "Tell them it depends on employee count and offer to calculate it"
+    ],
+    correct: 2,
+    points: 1
+  },
+  {
+    id: 13, topic: "Call Handling", type: "mc",
+    text: "A customer calls asking about a recent invoice and a possible double charge. Where do you direct them?",
+    options: [
+      "Sales team (brightpaysales@brightsg.com)",
+      "Payment Services (billing@brightsg.com or 0345 9390019)",
+      "The Migration Team via the Migration Call Request form",
+      "Marzena"
+    ],
+    correct: 1,
+    points: 1
+  },
+  {
+    id: 14, topic: "Call Handling", type: "scenario",
+    text: "A customer calls the migration line and says:",
+    scenario: "\"I've already migrated to Cloud, but I'm having trouble figuring out how to process a mid-year starter. Can you help?\"",
+    prompt: "This isn't a migration question. What do you do?",
+    keywords: ["payroll support","not migration","ai bot","transfer","support line","brightpayonline","redirect"],
+    keyPhraseSets: [
+      ["payroll","support"],
+      ["ai bot","transfer","redirect","support line"]
+    ],
+    idealAnswer: "This is a general payroll query, not a migration question. Direct the customer to: 1) The in-product AI bot for self-service help, 2) The BrightPay Payroll Support team (not the migration line) — either transfer them to the support line option, or advise them to call back on the same number and select Customer Support, or email BrightPayOnlineUkSupport@brightsg.com.",
+    points: 2
+  },
+  {
+    id: 15, topic: "Call Handling", type: "mc",
+    text: "A customer mentions they use the Construction Industry Scheme (CIS). What should you do?",
+    options: [
+      "Walk them through migrating CIS data step by step yourself",
+      "Send the CIS migration macro with step-by-step instructions and offer to book a migration call if needed",
+      "Immediately escalate to Tier 2 — CIS is always out of scope for Tier 1",
+      "Tell them CIS is not available on BrightPay Cloud"
+    ],
+    correct: 1,
+    points: 1
+  },
+  {
+    id: 16, topic: "Call Handling", type: "tf",
+    text: "BrightPay Cloud offers all new customers a free 60-day trial.",
+    correct: false,
+    explanation: "BrightPay Cloud does NOT offer a free 60-day trial unless the Sales Team has arranged a special deal.",
+    points: 1
+  },
+  // ===== CARE PACK & EMERGENCY =====
+  {
+    id: 17, topic: "Care Pack & Emergency", type: "mc",
+    text: "The Care Pack training describes three customer scenarios. What are they?",
+    options: [
+      "New customer / Returning customer / VIP customer",
+      "Still Time to Migrate / Needs More Time (Care Pack) / About to Miss Payroll (Emergency)",
+      "Standard migration / Bureau migration / CIS migration",
+      "Phone support / Email support / Remote desktop support"
+    ],
+    correct: 1,
+    points: 1
+  },
+  {
+    id: 18, topic: "Care Pack & Emergency", type: "scenario",
+    text: "A customer calls and says:",
+    scenario: "\"I know I need to move to Cloud, but there's no way I can get it done before the deadline. I just need more time. Is there anything you can do?\"",
+    prompt: "What do you offer this customer? What must they do in return? What's the expected timeline for their licence key? What Zendesk action do you take?",
+    keywords: ["care pack","sign up","cloud","annual","macro","uk migration care pack","1 business day","licence","extension","desktop"],
+    keyPhraseSets: [
+      ["care pack"],
+      ["sign up","cloud","annual","subscri"],
+      ["macro","uk migration care pack"],
+      ["1","day","business day"]
+    ],
+    idealAnswer: "Offer the Care Pack. The customer must sign up to a BrightPay Cloud annual plan (via uk-26-27.brightpay.com/sign-up). Apply the Zendesk macro 'UK Migration Care Pack (Standard or Bureau)' — the macro sends the customer everything they need (download links, sign-up link, next steps) and fills all required Zendesk fields. The customer receives their Desktop licence key within 1 business day of sign-up. They get a Desktop extension — Standard: until 1 June 2026, Bureau: until 3 September 2026.",
+    points: 3
+  },
+  {
+    id: 19, topic: "Care Pack & Emergency", type: "mc",
+    text: "To qualify for Emergency Desktop Access, ALL of the following criteria must be true. Which set is correct?",
+    options: [
+      "New BrightPay customer, needs immediate payroll access, has fewer than 50 employees",
+      "Existing BrightPay customer, payroll due in the next few days, unable to sign up to BrightPay Online before their payroll deadline",
+      "Customer has more than 100 employees, is on a Bureau licence, and has already attempted migration",
+      "Customer has been a BrightPay user for 2+ years, has contacted support before, and has an active subscription"
+    ],
+    correct: 1,
+    points: 1
+  },
+  {
+    id: 20, topic: "Care Pack & Emergency", type: "scenario",
+    text: "A customer calls in a panic:",
+    scenario: "\"My payroll is due tomorrow morning and I can't get into BrightPay Desktop anymore — it's saying my licence has expired. I haven't migrated yet and I can't do it overnight. My staff need to be paid!\"",
+    prompt: "Walk through exactly what you do on this call. Include eligibility checks, Zendesk actions, what happens next, and what you say to the customer.",
+    keywords: ["emergency","eligib","existing","payroll","deadline","macro","uk migration emergency","niall","1 hour","business hour","licence key","assign"],
+    keyPhraseSets: [
+      ["eligib","criteria","existing","payroll"],
+      ["macro","emergency"],
+      ["niall","assign","auto"],
+      ["1","hour","business hour"]
+    ],
+    idealAnswer: "1) Confirm they meet all 3 Emergency criteria: existing BrightPay customer (yes), payroll due in the next few days (yes — tomorrow), unable to sign up to BrightPay Online before deadline (yes). 2) Apply the Zendesk macro 'UK Migration Emergency (Standard or Bureau)'. The macro sends the customer download links, licence key info, and migration resources. It fills all required Zendesk fields and auto-assigns the case to Niall Byrne as on-hold. 3) Niall will issue the licence key within 1 business hour. 4) Reassure the customer: 'I'm going to send you an email right now with a link to download the Desktop software and all the information you need. One of our team will send you a licence key within the next hour so you can get your payroll processed.'",
+    points: 3
+  },
+  {
+    id: 21, topic: "Care Pack & Emergency", type: "tf",
+    text: "If you've already explained the Care Pack or Emergency process verbally to the customer, it's okay to skip the Zendesk macro.",
+    correct: false,
+    explanation: "CRITICAL: The macro MUST be used. It triggers the licence key follow-up process and fills required fields/tags. Without it, the customer will NOT receive their key and will likely return to support frustrated.",
+    points: 1
+  },
+  {
+    id: 22, topic: "Care Pack & Emergency", type: "mc",
+    text: "After applying the Emergency Desktop Access macro, how quickly should the customer expect to receive their licence key?",
+    options: [
+      "Within 30 minutes",
+      "Within 1 business hour",
+      "Within 1 business day",
+      "Within 24–48 hours"
+    ],
+    correct: 1,
+    points: 1
+  },
+  // ===== ESCALATION & HANDOVER =====
+  {
+    id: 23, topic: "Escalation & Handover", type: "mc",
+    text: "Which of the following scenarios should Tier 1 handle directly WITHOUT escalating or handing over?",
+    options: [
+      "Bureau customer with multiple employers and complex payroll configurations",
+      "Standard single-employer customer needing a straightforward migration walkthrough",
+      "Customer with 300+ employees (including leavers)",
+      "Customer experiencing a technical error and data appearing incorrect post-migration"
+    ],
+    correct: 1,
+    points: 1
+  },
+  {
+    id: 24, topic: "Escalation & Handover", type: "mc",
+    text: "Before handing a case to Tier 2/3, what information must you capture as an internal note on the Zendesk case?",
+    options: [
+      "Customer name, phone number, and a one-line summary",
+      "Customer name, company name, licence type (Standard/Bureau), number of employers, number of employees, handover reason, summary of call, and what was already attempted",
+      "Just the customer's email address and ticket number",
+      "Customer name, company name, and the name of the Tier 2 agent you're assigning to"
+    ],
+    correct: 1,
+    points: 1
+  },
+  {
+    id: 25, topic: "Escalation & Handover", type: "scenario",
+    text: "A customer calls and says:",
+    scenario: "\"We're a payroll bureau with 5 employers, some with quite complex payroll configurations. We use Connect at the moment and we're not sure how all of this is going to work in Cloud. We really need someone to walk us through this properly.\"",
+    prompt: "What do you do? Include what you tell the customer and how you hand this over.",
+    keywords: ["handover","tier 2","book","migration call","bureau","gather","detail","licence","employer","concern","booking link"],
+    keyPhraseSets: [
+      ["handover","tier 2","escalat","book"],
+      ["gather","detail","note","capture"],
+      ["migration call","booking"]
+    ],
+    idealAnswer: "This is a Tier 2 handover — Bureau customer with multiple employers and complex configurations that need hands-on guidance beyond basic migration steps. Gather their details: confirm Bureau licence, note number of employers (5), and any specific concerns raised. Book a migration call using the booking link. Tell the customer: 'I'm able to help you with some of the initial migration steps. I can see that you have a more sophisticated payroll environment. To ensure that your migration support meets your specific needs we can book a call with one of our senior migration team members.' Capture all required handover information in the Zendesk internal note.",
+    points: 3
+  },
+  {
+    id: 26, topic: "Escalation & Handover", type: "scenario",
+    text: "A customer calls and is very upset:",
+    scenario: "\"This is absolutely unacceptable. I migrated yesterday and half my employee data is wrong. I've been on hold for 20 minutes. I want to speak to a manager right now.\"",
+    prompt: "What do you do?",
+    keywords: ["marzena","escalat","assign","zendesk","complaint","leader","let the customer know"],
+    keyPhraseSets: [
+      ["marzena","assign"],
+      ["escalat","complaint","leader","manager"]
+    ],
+    idealAnswer: "This is a complaint/escalation request. Let the customer know you will escalate their case to a leader within the migration team. Assign the Zendesk case to Marzena. Do not attempt to resolve the complaint or technical issue yourself — this requires a senior team member.",
+    points: 2
+  },
+  {
+    id: 27, topic: "Escalation & Handover", type: "mc",
+    text: "During a migration, the customer encounters a system error and their data appears incorrect after import. What is your FIRST step?",
+    options: [
+      "Immediately assign the Zendesk case to Marzena",
+      "Ask the customer to delete everything and try again",
+      "Check in Team Chat with Marzena / Bob first — if unresolved, note error messages, steps taken, and screenshots, then assign the case to Marzena",
+      "Transfer the customer to the Payroll Support line"
+    ],
+    correct: 2,
+    points: 1
+  },
+  {
+    id: 28, topic: "Escalation & Handover", type: "scenario",
+    text: "A customer calls and says:",
+    scenario: "\"I'm a single-employer customer but I've got about 350 staff, including some leavers from this tax year. I want to move to Cloud — can you help me do that now?\"",
+    prompt: "What do you tell the customer and what action do you take?",
+    keywords: ["300","cannot","self-import","migration team","migration call request form","standard","not employee numbers form"],
+    keyPhraseSets: [
+      ["300","limit","cannot","restrict"],
+      ["migration call request","form"],
+      ["migration team","follow up"]
+    ],
+    idealAnswer: "BrightPay Cloud is restricted to 300 employees (including leavers) per employer — this customer has 350, so they cannot self-import. Because they are a Standard customer (not Bureau), do NOT complete the Employee Numbers form. Instead, complete the Migration Call Request Form with all details (reason, employee count, licence type). The Migration Team will review and follow up with the customer to arrange a call to migrate the data or offer an alternative (e.g. splitting the employer file).",
+    points: 3
+  },
+  {
+    id: 29, topic: "Escalation & Handover", type: "mc",
+    text: "Emergency licence key issues should be escalated to:",
+    options: [
+      "Marzena",
+      "Bob",
+      "Niall Byrne",
+      "The Sales team"
+    ],
+    correct: 2,
+    points: 1
+  },
+  // ===== KEY DATES & POLICY =====
+  {
+    id: 30, topic: "Key Dates & Policy", type: "mc",
+    text: "What is the official BrightPay Desktop 25/26 End-of-Life date?",
+    options: [
+      "1st March 2026",
+      "6th April 2026",
+      "1st June 2026",
+      "3rd September 2026"
+    ],
+    correct: 1,
+    points: 1
+  },
+  {
+    id: 31, topic: "Key Dates & Policy", type: "mc",
+    text: "Under the Care Pack Desktop extension, what are the extension deadlines for Standard and Bureau customers respectively?",
+    options: [
+      "Standard: 6th April 2026 / Bureau: 1st June 2026",
+      "Standard: 1st June 2026 / Bureau: 3rd September 2026",
+      "Standard: 3rd September 2026 / Bureau: 31st December 2026",
+      "Both Standard and Bureau: 1st June 2026"
+    ],
+    correct: 1,
+    points: 1
+  },
+  {
+    id: 32, topic: "Key Dates & Policy", type: "mc",
+    text: "A customer who migrates to BrightPay Cloud — how long do they retain access to BrightPay Connect?",
+    options: [
+      "Connect access ends immediately upon migration",
+      "6 months after migration",
+      "2 years — until 5th April 2028, at no additional charge",
+      "1 year — until 5th April 2027"
+    ],
+    correct: 2,
+    points: 1
+  },
+  {
+    id: 33, topic: "Key Dates & Policy", type: "mc",
+    text: "A customer who does NOT migrate to Cloud — when does their BrightPay Connect access end?",
+    options: [
+      "Immediately on 6th April 2026",
+      "11th July 2026",
+      "5th April 2027",
+      "It never expires"
+    ],
+    correct: 1,
+    points: 1
+  }
+];
+
+const TOTAL_QUESTIONS = QUESTIONS.length;
+const TOTAL_POINTS = QUESTIONS.reduce((s, q) => s + q.points, 0);
+
+let currentQ = -1;
+let answers = {};
+let startTime = null;
+let timerInterval = null;
+let agentName = "";
+
+function $(id) { return document.getElementById(id); }
+
+function startTimer() {
+  startTime = Date.now();
+  timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    $('timerDisplay').textContent = 'Time: ' + m + ':' + s.toString().padStart(2, '0');
+  }, 1000);
+}
+
+function updateProgress() {
+  const pct = ((currentQ + 1) / TOTAL_QUESTIONS) * 100;
+  $('progressBar').style.width = pct + '%';
+  $('progressInfo').textContent = 'Question ' + (currentQ + 1) + ' of ' + TOTAL_QUESTIONS;
+}
+
+function showWelcome() {
+  $('content').innerHTML =
+    '<div class="card welcome-card">' +
+      '<h2>Welcome to Your Readiness Assessment</h2>' +
+      '<p>This assessment will determine whether you\'re ready to handle live customer calls on the BrightPay migration support line.</p>' +
+      '<p>Every question is drawn directly from your training materials — product knowledge, the migration process, call handling, Care Pack and Emergency scenarios, escalation protocols, pricing referrals, and key dates.</p>' +
+      '<div class="stat-row">' +
+        '<div class="stat-box"><div class="num">' + TOTAL_QUESTIONS + '</div><div class="label">Questions</div></div>' +
+        '<div class="stat-box"><div class="num">~30 min</div><div class="label">Estimated Time</div></div>' +
+        '<div class="stat-box"><div class="num">80%</div><div class="label">Pass Threshold</div></div>' +
+      '</div>' +
+      '<p>The mix includes <strong>realistic call scenarios</strong>, <strong>multiple choice</strong>, <strong>true/false</strong>, and <strong>short-answer prompts</strong> where you\'ll need to explain a process in your own words.</p>' +
+      '<p>You won\'t see correct answers until the very end — just like a real call, you need to back yourself.</p>' +
+      '<p style="margin-top:20px; font-weight:500;">Enter your name to begin:</p>' +
+      '<input type="text" class="name-input" id="nameInput" placeholder="Your full name">' +
+      '<br>' +
+      '<button class="btn-next" id="startBtn" onclick="beginAssessment()">Start Assessment <span class="arrow">&rarr;</span></button>' +
+    '</div>';
+  setTimeout(function() { $('nameInput').focus(); }, 100);
+  $('nameInput').addEventListener('keypress', function(e) { if (e.key === 'Enter') beginAssessment(); });
+}
+
+function beginAssessment() {
+  agentName = ($('nameInput').value || '').trim();
+  if (!agentName) { $('nameInput').style.borderColor = '#C62828'; $('nameInput').focus(); return; }
+  startTimer();
+  nextQuestion();
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ >= TOTAL_QUESTIONS) { showResults(); return; }
+  updateProgress();
+  renderQuestion(QUESTIONS[currentQ]);
+}
+
+function renderQuestion(q) {
+  var html = '<div class="card">';
+  html += '<span class="topic-badge">' + q.topic + '</span>';
+  html += '<div class="q-number">Question ' + q.id + ' of ' + TOTAL_QUESTIONS;
+  if (q.type === 'mc') html += '<span class="q-type mc">Multiple Choice</span>';
+  else if (q.type === 'tf') html += '<span class="q-type tf">True / False</span>';
+  else html += '<span class="q-type scenario">Scenario — Written Response</span>';
+  html += ' <span style="float:right;font-size:12px;color:#9CA3AF;">' + q.points + ' point' + (q.points > 1 ? 's' : '') + '</span></div>';
+  html += '<div class="q-text">' + q.text + '</div>';
+
+  if (q.scenario) html += '<div class="q-scenario">' + q.scenario + '</div>';
+  if (q.prompt) html += '<div class="q-text" style="font-size:15px;margin-top:8px;">' + q.prompt + '</div>';
+
+  if (q.type === 'mc') {
+    html += '<div class="options">';
+    q.options.forEach(function(opt, i) {
+      html += '<button class="option-btn" data-idx="' + i + '" onclick="selectOption(this, ' + i + ')">' + String.fromCharCode(65 + i) + ') ' + opt + '</button>';
+    });
+    html += '</div>';
+  } else if (q.type === 'tf') {
+    html += '<div class="tf-group">' +
+      '<button class="tf-btn" onclick="selectTF(this, true)">True</button>' +
+      '<button class="tf-btn" onclick="selectTF(this, false)">False</button>' +
+    '</div>';
+  } else {
+    html += '<textarea class="text-answer" id="textAnswer" placeholder="Type your answer here..."></textarea>';
+    html += '<p class="hint">Be specific — reference the actual processes, tools, macros, or contacts from your training.</p>';
+  }
+
+  html += '<button class="btn-next" id="nextBtn" onclick="submitAnswer()" disabled>' +
+    (currentQ < TOTAL_QUESTIONS - 1 ? 'Next Question' : 'Finish Assessment') + ' <span class="arrow">&rarr;</span>' +
+  '</button>';
+  html += '</div>';
+  $('content').innerHTML = html;
+
+  if (q.type === 'scenario') {
+    var ta = $('textAnswer');
+    ta.addEventListener('input', function() {
+      $('nextBtn').disabled = ta.value.trim().length < 10;
+    });
+    setTimeout(function() { ta.focus(); }, 100);
+  }
+}
+
+var selectedMC = null;
+var selectedTF = null;
+
+function selectOption(btn, idx) {
+  document.querySelectorAll('.option-btn').forEach(function(b) { b.classList.remove('selected'); });
+  btn.classList.add('selected');
+  selectedMC = idx;
+  $('nextBtn').disabled = false;
+}
+
+function selectTF(btn, val) {
+  document.querySelectorAll('.tf-btn').forEach(function(b) { b.classList.remove('selected'); });
+  btn.classList.add('selected');
+  selectedTF = val;
+  $('nextBtn').disabled = false;
+}
+
+function submitAnswer() {
+  var q = QUESTIONS[currentQ];
+  if (q.type === 'mc') {
+    answers[q.id] = { type: 'mc', selected: selectedMC, correct: q.correct, isCorrect: selectedMC === q.correct, points: q.points, topic: q.topic, text: q.text, userAnswer: q.options[selectedMC], correctAnswer: q.options[q.correct] };
+    selectedMC = null;
+  } else if (q.type === 'tf') {
+    answers[q.id] = { type: 'tf', selected: selectedTF, correct: q.correct, isCorrect: selectedTF === q.correct, points: q.points, topic: q.topic, text: q.text, userAnswer: selectedTF ? 'True' : 'False', correctAnswer: q.correct ? 'True' : 'False', explanation: q.explanation };
+    selectedTF = null;
+  } else {
+    var text = $('textAnswer').value.trim();
+    var score = scoreScenario(text, q);
+    answers[q.id] = { type: 'scenario', text: text, score: score, maxPoints: q.points, topic: q.topic, qtext: q.text + (q.scenario ? ' ' + q.scenario : '') + (q.prompt ? ' ' + q.prompt : ''), idealAnswer: q.idealAnswer };
+  }
+  nextQuestion();
+}
+
+function scoreScenario(text, q) {
+  var lower = text.toLowerCase();
+  if (!q.keyPhraseSets || q.keyPhraseSets.length === 0) return 0;
+  var hits = 0;
+  q.keyPhraseSets.forEach(function(set) {
+    var matched = set.some(function(kw) { return lower.indexOf(kw.toLowerCase()) !== -1; });
+    if (matched) hits++;
+  });
+  var ratio = hits / q.keyPhraseSets.length;
+  if (ratio >= 0.85) return q.points;
+  if (ratio >= 0.6) return Math.ceil(q.points * 0.66);
+  if (ratio >= 0.35) return Math.ceil(q.points * 0.33);
+  return 0;
+}
+
+function showResults() {
+  clearInterval(timerInterval);
+  var elapsed = Math.floor((Date.now() - startTime) / 1000);
+  var minutes = Math.floor(elapsed / 60);
+  var seconds = elapsed % 60;
+
+  var totalEarned = 0;
+  var topicScores = {};
+  var topicMax = {};
+  var incorrect = [];
+
+  Object.values(answers).forEach(function(a) {
+    if (!topicScores[a.topic]) { topicScores[a.topic] = 0; topicMax[a.topic] = 0; }
+    if (a.type === 'scenario') {
+      topicScores[a.topic] += a.score;
+      topicMax[a.topic] += a.maxPoints;
+      totalEarned += a.score;
+      if (a.score < a.maxPoints) {
+        incorrect.push({ topic: a.topic, question: a.qtext, yourAnswer: a.text, correctAnswer: a.idealAnswer, earned: a.score, max: a.maxPoints, type: 'scenario' });
+      }
+    } else {
+      topicMax[a.topic] += a.points;
+      if (a.isCorrect) {
+        topicScores[a.topic] += a.points;
+        totalEarned += a.points;
+      } else {
+        incorrect.push({ topic: a.topic, question: a.text, yourAnswer: a.userAnswer, correctAnswer: a.correctAnswer + (a.explanation ? ' — ' + a.explanation : ''), earned: 0, max: a.points, type: a.type });
+      }
+    }
+  });
+
+  var pct = Math.round((totalEarned / TOTAL_POINTS) * 100);
+  var passed = pct >= 80;
+
+  $('progressInfo').textContent = 'Assessment Complete';
+  $('progressBar').style.width = '100%';
+  $('timerDisplay').textContent = 'Completed in ' + minutes + 'm ' + seconds + 's';
+
+  var html = '<div class="card results-card">' +
+    '<h2>Assessment Results — ' + agentName + '</h2>' +
+    '<div class="verdict-box ' + (passed ? 'pass' : 'fail') + '">' +
+      '<div class="verdict-label">' + (passed ? '\u2713 Go Live Ready' : '\u2717 Not Yet Ready') + '</div>' +
+      '<div class="verdict-score">' + pct + '%</div>' +
+      '<div class="verdict-text">' + totalEarned + ' / ' + TOTAL_POINTS + ' points</div>' +
+    '</div>' +
+    '<p style="text-align:center;color:var(--grey);font-size:14px;">Completed in ' + minutes + ' minutes ' + seconds + ' seconds</p>';
+
+  // Breakdown table
+  html += '<h3 style="margin-top:28px;font-size:16px;color:var(--bright-blue);">Score Breakdown by Topic</h3>' +
+    '<table class="breakdown-table">' +
+      '<tr><th>Topic Area</th><th>Score</th><th>Percentage</th><th style="min-width:120px;"></th></tr>';
+  Object.keys(topicMax).forEach(function(topic) {
+    var s = topicScores[topic] || 0;
+    var m = topicMax[topic];
+    var p = Math.round((s / m) * 100);
+    var color = p >= 80 ? 'var(--green)' : p >= 60 ? 'var(--amber)' : 'var(--red)';
+    html += '<tr>' +
+      '<td>' + topic + '</td>' +
+      '<td>' + s + ' / ' + m + '</td>' +
+      '<td style="font-weight:600;color:' + color + '">' + p + '%</td>' +
+      '<td><div class="score-bar-bg"><div class="score-bar-fill" style="width:' + p + '%;background:' + color + ';"></div></div></td>' +
+    '</tr>';
+  });
+  html += '</table>';
+
+  // Knowledge gaps
+  if (incorrect.length > 0) {
+    html += '<div class="gap-section">' +
+      '<h3>\u26A0 Knowledge Gaps Identified (' + incorrect.length + ' question' + (incorrect.length > 1 ? 's' : '') + ')</h3>';
+    var gapTopics = {};
+    incorrect.forEach(function(item) {
+      if (!gapTopics[item.topic]) gapTopics[item.topic] = [];
+      gapTopics[item.topic].push(item);
+    });
+    Object.keys(gapTopics).forEach(function(topic) {
+      html += '<div class="gap-item"><strong>' + topic + '</strong> — ' + gapTopics[topic].length + ' question' + (gapTopics[topic].length > 1 ? 's' : '') + ' to review</div>';
+    });
+    html += '</div>';
+  }
+
+  // Full review
+  html += '<div class="review-section"><h3>Full Question Review</h3>';
+  Object.keys(answers).forEach(function(id) {
+    var a = answers[id];
+    var q = QUESTIONS.find(function(qq) { return qq.id == id; });
+    var earned, max, isRight;
+    if (a.type === 'scenario') {
+      earned = a.score; max = a.maxPoints; isRight = earned === max;
+    } else {
+      earned = a.isCorrect ? a.points : 0; max = a.points; isRight = a.isCorrect;
+    }
+    var mark = isRight ? '<span class="rmark" style="color:var(--green);">\u2713 ' + earned + '/' + max + '</span>' : '<span class="rmark" style="color:var(--red);">' + earned + '/' + max + '</span>';
+    html += '<div class="review-item">' + mark + '<div class="rq">Q' + id + ': ' + (a.type === 'scenario' ? (a.qtext || q.text) : a.text) + '</div>';
+    if (a.type === 'scenario') {
+      html += '<div class="ryour"><strong>Your answer:</strong> ' + a.text.substring(0, 300) + (a.text.length > 300 ? '...' : '') + '</div>';
+      html += '<div class="rcorrect"><strong>Model answer:</strong> ' + a.idealAnswer + '</div>';
+    } else {
+      html += '<div class="ryour"><strong>Your answer:</strong> ' + a.userAnswer + '</div>';
+      if (!isRight) html += '<div class="rcorrect"><strong>Correct answer:</strong> ' + a.correctAnswer + (a.explanation ? ' — ' + a.explanation : '') + '</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+
+  if (!passed) {
+    html += '<div style="background:#FFF3E0;border:2px solid var(--amber);border-radius:10px;padding:20px;margin-top:24px;">' +
+      '<strong style="color:var(--amber);">Recommended Next Steps</strong>' +
+      '<p style="margin-top:8px;font-size:14px;">Review the training materials for the topic areas flagged above, then retake this assessment. Focus particularly on the scenario-based questions — these test whether you can apply your knowledge on a real call.</p>' +
+    '</div>';
+  } else {
+    html += '<div style="background:#E8F5E9;border:2px solid var(--green);border-radius:10px;padding:20px;margin-top:24px;">' +
+      '<strong style="color:var(--green);">Congratulations!</strong>' +
+      '<p style="margin-top:8px;font-size:14px;">You\'ve demonstrated the knowledge needed to handle live migration calls. Review any flagged areas above to sharpen up, and you\'re good to go.</p>' +
+    '</div>';
+  }
+
+  html += '<button class="print-btn" onclick="window.print()">Print / Save as PDF</button>';
+  html += '</div>';
+  $('content').innerHTML = html;
+  window.scrollTo(0, 0);
+}
+</script>
+</body>
+</html>
