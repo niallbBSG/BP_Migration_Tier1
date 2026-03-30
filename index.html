@@ -392,12 +392,12 @@ const ACCESS_CODE = "BrightMigrate2026";
 const GITHUB_CONFIG = {
   owner: "niallbBSG",
   repo: "BP_Migration_Tier1",
-  token: "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",
+  token: "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",
   branch: "main"
 };
 
 // Email recipients
-const EMAIL_TO = "niall.byrne@brightsg.com;marzena.ignar@brightsg.com;rory.gibson@pwc.com";
+const EMAIL_TO = "niall.byrne@brightsg.com,marzena.ignar@brightsg.com,rory.gibson@pwc.com";
 
 function checkPassword() {
   const input = document.getElementById('pwInput').value.trim();
@@ -905,7 +905,7 @@ function sendResultsEmail(resultData) {
     '---\nThis is an automated email from the BrightPay Tier 1 Readiness Assessment.';
 
   var mailto = 'mailto:' + EMAIL_TO + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-  window.open(mailto, '_blank');
+  window.location.href = mailto;
 }
 
 function showWelcome() {
