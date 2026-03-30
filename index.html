@@ -343,16 +343,9 @@
   .action-btn.secondary { background: white; color: var(--bright-blue); border-color: var(--bright-blue); }
   .action-btn.secondary:hover { background: var(--bright-light); }
   .action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-  .log-status {
-    margin-top: 12px; padding: 10px 14px; border-radius: 8px;
-    font-size: 13px; display: none;
-  }
-  .log-status.success { display: block; background: #E8F5E9; color: var(--green); }
-  .log-status.error { display: block; background: #FFEBEE; color: var(--red); }
-  .log-status.pending { display: block; background: #FFF8E1; color: var(--amber); }
   @media print {
     .header { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-    .action-buttons, .log-status { display: none !important; }
+    .action-buttons { display: none !important; }
   }
 </style>
 </head>
@@ -387,14 +380,6 @@
 // --- CONFIG ---
 // To change the password, edit the string below.
 const ACCESS_CODE = "BrightMigrate2026";
-
-// GitHub results logging — replace YOUR_TOKEN_HERE after creating a fine-grained PAT
-const GITHUB_CONFIG = {
-  owner: "niallbBSG",
-  repo: "BP_Migration_Tier1",
-  token: "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",
-  branch: "main"
-};
 
 // Email recipients
 const EMAIL_TO = "niall.byrne@brightsg.com,marzena.ignar@brightsg.com,rory.gibson@pwc.com";
@@ -839,50 +824,6 @@ function updateProgress() {
   $('progressInfo').textContent = 'Question ' + (currentQ + 1) + ' of ' + TOTAL_QUESTIONS;
 }
 
-// --- GITHUB RESULTS LOGGING ---
-function logToGitHub(resultData) {
-  var statusEl = document.getElementById('logStatus');
-  if (GITHUB_CONFIG.token === 'YOUR_TOKEN_HERE') {
-    if (statusEl) { statusEl.className = 'log-status error'; statusEl.textContent = 'Results logging not configured — GitHub token not set.'; }
-    return;
-  }
-  if (statusEl) { statusEl.className = 'log-status pending'; statusEl.textContent = 'Saving results...'; }
-
-  var now = new Date();
-  var timestamp = now.toISOString().replace(/[:.]/g, '-').substring(0, 19);
-  var safeName = resultData.agentName.replace(/[^a-zA-Z0-9]/g, '_');
-  var filePath = 'results/' + safeName + '_' + timestamp + '.json';
-
-  var fileContent = JSON.stringify(resultData, null, 2);
-  var base64Content = btoa(unescape(encodeURIComponent(fileContent)));
-
-  fetch('https://api.github.com/repos/' + GITHUB_CONFIG.owner + '/' + GITHUB_CONFIG.repo + '/contents/' + filePath, {
-    method: 'PUT',
-    headers: {
-      'Authorization': 'Bearer ' + GITHUB_CONFIG.token,
-      'Content-Type': 'application/json',
-      'Accept': 'application/vnd.github.v3+json'
-    },
-    body: JSON.stringify({
-      message: 'Assessment result: ' + resultData.agentName + ' — ' + resultData.percentage + '% (' + resultData.verdict + ')',
-      content: base64Content,
-      branch: GITHUB_CONFIG.branch
-    })
-  })
-  .then(function(response) {
-    if (response.ok) {
-      if (statusEl) { statusEl.className = 'log-status success'; statusEl.textContent = 'Results saved successfully.'; }
-    } else {
-      response.text().then(function(t) {
-        if (statusEl) { statusEl.className = 'log-status error'; statusEl.textContent = 'Could not save results. Please use the email or PDF option.'; }
-      });
-    }
-  })
-  .catch(function(err) {
-    if (statusEl) { statusEl.className = 'log-status error'; statusEl.textContent = 'Could not save results. Please use the email or PDF option.'; }
-  });
-}
-
 // --- EMAIL RESULTS ---
 function sendResultsEmail(resultData) {
   var subject = 'Assessment Result: ' + resultData.agentName + ' — ' + resultData.percentage + '% (' + resultData.verdict + ')';
@@ -906,6 +847,36 @@ function sendResultsEmail(resultData) {
 
   var mailto = 'mailto:' + EMAIL_TO + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
   window.location.href = mailto;
+}
+
+// --- COPY RESULTS TO CLIPBOARD ---
+function copyResults(resultData) {
+  var text = 'BRIGHTPAY TIER 1 READINESS ASSESSMENT RESULTS\n' +
+    '================================================\n\n' +
+    'Agent: ' + resultData.agentName + '\n' +
+    'Date: ' + resultData.completedAt + '\n' +
+    'Time taken: ' + resultData.timeTaken + '\n' +
+    'Attempt: ' + resultData.attemptNumber + '\n\n' +
+    'VERDICT: ' + resultData.verdict + '\n' +
+    'Score: ' + resultData.score + ' / ' + resultData.totalPoints + ' (' + resultData.percentage + '%)\n\n' +
+    'BREAKDOWN BY TOPIC\n' +
+    '-------------------\n';
+  Object.keys(resultData.topicBreakdown).forEach(function(t) {
+    text += t + ': ' + resultData.topicBreakdown[t] + '\n';
+  });
+  if (resultData.gaps.length > 0) {
+    text += '\nKNOWLEDGE GAPS\n--------------\n' + resultData.gaps.join('\n') + '\n';
+  } else {
+    text += '\nNo knowledge gaps identified.\n';
+  }
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied!';
+    btn.style.background = '#E8F5E9';
+    btn.style.color = '#2E7D32';
+    btn.style.borderColor = '#2E7D32';
+    setTimeout(function() { btn.textContent = 'Copy to Clipboard'; btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = ''; }, 2500);
+  });
 }
 
 function showWelcome() {
@@ -1194,16 +1165,16 @@ function showResults() {
   html += '<div class="action-buttons">' +
     '<button class="action-btn primary" onclick="sendResultsEmail(window._resultData)">Email Results</button>' +
     '<button class="action-btn secondary" onclick="window.print()">Save as PDF</button>' +
+    '<button class="action-btn secondary" id="copyBtn" onclick="copyResults(window._resultData)">Copy to Clipboard</button>' +
   '</div>' +
-  '<div class="log-status" id="logStatus"></div>';
+  '<p style="margin-top:10px;font-size:13px;color:var(--grey);">Please email your results or paste them into the PwC Migration Training Teams channel.</p>';
 
   html += '</div>';
   $('content').innerHTML = html;
   window.scrollTo(0, 0);
 
-  // Store for button callbacks and auto-log to GitHub
+  // Store for button callbacks
   window._resultData = resultData;
-  logToGitHub(resultData);
 }
 </script>
 </body>
