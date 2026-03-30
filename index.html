@@ -331,22 +331,28 @@
     .stat-row { flex-direction: column; }
     .pw-box { padding: 32px 24px; }
   }
-  .print-btn {
-    background: white;
-    color: var(--bright-blue);
-    border: 2px solid var(--bright-blue);
-    padding: 10px 24px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    margin-top: 12px;
+  .action-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+  .action-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 11px 22px; border-radius: 8px; font-size: 14px;
+    font-weight: 600; cursor: pointer; font-family: inherit;
+    border: 2px solid transparent; transition: all 0.2s;
   }
-  .print-btn:hover { background: var(--bright-light); }
+  .action-btn.primary { background: var(--bright-blue); color: white; border-color: var(--bright-blue); }
+  .action-btn.primary:hover { background: var(--bright-dark); }
+  .action-btn.secondary { background: white; color: var(--bright-blue); border-color: var(--bright-blue); }
+  .action-btn.secondary:hover { background: var(--bright-light); }
+  .action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .log-status {
+    margin-top: 12px; padding: 10px 14px; border-radius: 8px;
+    font-size: 13px; display: none;
+  }
+  .log-status.success { display: block; background: #E8F5E9; color: var(--green); }
+  .log-status.error { display: block; background: #FFEBEE; color: var(--red); }
+  .log-status.pending { display: block; background: #FFF8E1; color: var(--amber); }
   @media print {
     .header { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-    .btn-next, .print-btn { display: none; }
+    .action-buttons, .log-status { display: none !important; }
   }
 </style>
 </head>
@@ -378,9 +384,20 @@
 </div>
 
 <script>
-// --- PASSWORD GATE ---
+// --- CONFIG ---
 // To change the password, edit the string below.
 const ACCESS_CODE = "BrightMigrate2026";
+
+// GitHub results logging — replace YOUR_TOKEN_HERE after creating a fine-grained PAT
+const GITHUB_CONFIG = {
+  owner: "niallbBSG",
+  repo: "BP_Migration_Tier1",
+  token: "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",
+  branch: "main"
+};
+
+// Email recipients
+const EMAIL_TO = "niall.byrne@brightsg.com;marzena.ignar@brightsg.com;rory.gibson@pwc.com";
 
 function checkPassword() {
   const input = document.getElementById('pwInput').value.trim();
@@ -822,6 +839,75 @@ function updateProgress() {
   $('progressInfo').textContent = 'Question ' + (currentQ + 1) + ' of ' + TOTAL_QUESTIONS;
 }
 
+// --- GITHUB RESULTS LOGGING ---
+function logToGitHub(resultData) {
+  var statusEl = document.getElementById('logStatus');
+  if (GITHUB_CONFIG.token === 'YOUR_TOKEN_HERE') {
+    if (statusEl) { statusEl.className = 'log-status error'; statusEl.textContent = 'Results logging not configured — GitHub token not set.'; }
+    return;
+  }
+  if (statusEl) { statusEl.className = 'log-status pending'; statusEl.textContent = 'Saving results...'; }
+
+  var now = new Date();
+  var timestamp = now.toISOString().replace(/[:.]/g, '-').substring(0, 19);
+  var safeName = resultData.agentName.replace(/[^a-zA-Z0-9]/g, '_');
+  var filePath = 'results/' + safeName + '_' + timestamp + '.json';
+
+  var fileContent = JSON.stringify(resultData, null, 2);
+  var base64Content = btoa(unescape(encodeURIComponent(fileContent)));
+
+  fetch('https://api.github.com/repos/' + GITHUB_CONFIG.owner + '/' + GITHUB_CONFIG.repo + '/contents/' + filePath, {
+    method: 'PUT',
+    headers: {
+      'Authorization': 'Bearer ' + GITHUB_CONFIG.token,
+      'Content-Type': 'application/json',
+      'Accept': 'application/vnd.github.v3+json'
+    },
+    body: JSON.stringify({
+      message: 'Assessment result: ' + resultData.agentName + ' — ' + resultData.percentage + '% (' + resultData.verdict + ')',
+      content: base64Content,
+      branch: GITHUB_CONFIG.branch
+    })
+  })
+  .then(function(response) {
+    if (response.ok) {
+      if (statusEl) { statusEl.className = 'log-status success'; statusEl.textContent = 'Results saved successfully.'; }
+    } else {
+      response.text().then(function(t) {
+        if (statusEl) { statusEl.className = 'log-status error'; statusEl.textContent = 'Could not save results. Please use the email or PDF option.'; }
+      });
+    }
+  })
+  .catch(function(err) {
+    if (statusEl) { statusEl.className = 'log-status error'; statusEl.textContent = 'Could not save results. Please use the email or PDF option.'; }
+  });
+}
+
+// --- EMAIL RESULTS ---
+function sendResultsEmail(resultData) {
+  var subject = 'Assessment Result: ' + resultData.agentName + ' — ' + resultData.percentage + '% (' + resultData.verdict + ')';
+  var body = 'BRIGHTPAY TIER 1 READINESS ASSESSMENT RESULTS\n' +
+    '================================================\n\n' +
+    'Agent: ' + resultData.agentName + '\n' +
+    'Date: ' + resultData.completedAt + '\n' +
+    'Time taken: ' + resultData.timeTaken + '\n\n' +
+    'VERDICT: ' + resultData.verdict + '\n' +
+    'Score: ' + resultData.score + ' / ' + resultData.totalPoints + ' (' + resultData.percentage + '%)\n\n' +
+    'BREAKDOWN BY TOPIC\n' +
+    '-------------------\n' +
+    'Product Knowledge: ' + resultData.topicBreakdown['Product Knowledge'] + '\n' +
+    'Call Handling: ' + resultData.topicBreakdown['Call Handling'] + '\n' +
+    'Care Pack & Emergency: ' + resultData.topicBreakdown['Care Pack & Emergency'] + '\n' +
+    'Escalation & Handover: ' + resultData.topicBreakdown['Escalation & Handover'] + '\n' +
+    'Key Dates & Policy: ' + resultData.topicBreakdown['Key Dates & Policy'] + '\n\n' +
+    (resultData.gaps.length > 0 ? 'KNOWLEDGE GAPS\n--------------\n' + resultData.gaps.join('\n') + '\n\n' : 'No knowledge gaps identified.\n\n') +
+    'Attempt number: ' + resultData.attemptNumber + '\n\n' +
+    '---\nThis is an automated email from the BrightPay Tier 1 Readiness Assessment.';
+
+  var mailto = 'mailto:' + EMAIL_TO + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  window.open(mailto, '_blank');
+}
+
 function showWelcome() {
   $('content').innerHTML =
     '<div class="card welcome-card">' +
@@ -1066,10 +1152,58 @@ function showResults() {
     '</div>';
   }
 
-  html += '<button class="print-btn" onclick="window.print()">Print / Save as PDF</button>';
+  // Build result data object for logging and email
+  var topicBreakdown = {};
+  Object.keys(topicMax).forEach(function(topic) {
+    var s = topicScores[topic] || 0;
+    var m = topicMax[topic];
+    topicBreakdown[topic] = s + '/' + m + ' (' + Math.round((s/m)*100) + '%)';
+  });
+  var gapList = [];
+  if (incorrect.length > 0) {
+    var gapTopicsSummary = {};
+    incorrect.forEach(function(item) {
+      if (!gapTopicsSummary[item.topic]) gapTopicsSummary[item.topic] = 0;
+      gapTopicsSummary[item.topic]++;
+    });
+    Object.keys(gapTopicsSummary).forEach(function(t) {
+      gapList.push(t + ': ' + gapTopicsSummary[t] + ' question(s) to review');
+    });
+  }
+  var attemptKey = 'bp_assessment_' + agentName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+  var prevAttempts = 0;
+  try { prevAttempts = parseInt(sessionStorage.getItem(attemptKey) || '0', 10); } catch(e) {}
+  prevAttempts++;
+  try { sessionStorage.setItem(attemptKey, prevAttempts.toString()); } catch(e) {}
+
+  var resultData = {
+    agentName: agentName,
+    completedAt: new Date().toISOString(),
+    timeTaken: minutes + 'm ' + seconds + 's',
+    score: totalEarned,
+    totalPoints: TOTAL_POINTS,
+    percentage: pct,
+    verdict: passed ? 'GO LIVE READY' : 'NOT YET READY',
+    attemptNumber: prevAttempts,
+    topicBreakdown: topicBreakdown,
+    gaps: gapList,
+    answers: answers
+  };
+
+  // Action buttons
+  html += '<div class="action-buttons">' +
+    '<button class="action-btn primary" onclick="sendResultsEmail(window._resultData)">Email Results</button>' +
+    '<button class="action-btn secondary" onclick="window.print()">Save as PDF</button>' +
+  '</div>' +
+  '<div class="log-status" id="logStatus"></div>';
+
   html += '</div>';
   $('content').innerHTML = html;
   window.scrollTo(0, 0);
+
+  // Store for button callbacks and auto-log to GitHub
+  window._resultData = resultData;
+  logToGitHub(resultData);
 }
 </script>
 </body>
